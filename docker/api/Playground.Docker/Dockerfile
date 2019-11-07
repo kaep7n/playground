@@ -14,5 +14,6 @@ RUN dotnet publish "Playground.Docker.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
+VOLUME .:/app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Playground.Docker.dll"]
