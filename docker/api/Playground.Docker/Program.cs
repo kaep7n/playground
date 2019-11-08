@@ -31,7 +31,6 @@ namespace Playground.Docker
             File.WriteAllText(dockerfilePath, sb.ToString());
 
             File.Copy("Playground.Docker.Hello.dll", Path.Combine("contents", "Playground.Docker.Hello.dll"));
-            File.Copy("Playground.Docker.Hello.deps.json", Path.Combine("contents", "Playground.Docker.Hello.deps.json"));
             File.Copy("Playground.Docker.Hello.runtimeconfig.json", Path.Combine("contents", "Playground.Docker.Hello.runtimeconfig.json"));
 
             var filesInDirectory = contentsDir.GetFiles();
