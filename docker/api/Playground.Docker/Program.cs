@@ -22,16 +22,17 @@ namespace Playground.Docker
             sb.AppendLine("COPY . .");
             sb.AppendLine("ENTRYPOINT [\"dotnet\", \"Playground.Docker.Hello.dll\"]");
 
-            var contentsDir = Directory.CreateDirectory("contents");
+            Directory.Delete("contents", true);
 
+            var contentsDir = Directory.CreateDirectory("contents");
+            
             var dockerfilePath = Path.Combine("contents", "Dockerfile");
 
             File.WriteAllText(dockerfilePath, sb.ToString());
 
-            if (!File.Exists("contents/Playground.Docker.Hello.dll"))
-            {
-                File.Copy("Playground.Docker.Hello.dll", Path.Combine("contents", "Playground.Docker.Hello.dll"));
-            }
+            File.Copy("Playground.Docker.Hello.dll", Path.Combine("contents", "Playground.Docker.Hello.dll"));
+            File.Copy("Playground.Docker.Hello.deps.json", Path.Combine("contents", "Playground.Docker.Hello.deps.json"));
+            File.Copy("Playground.Docker.Hello.runtimeconfig.json", Path.Combine("contents", "Playground.Docker.Hello.runtimeconfig.json"));
 
             var filesInDirectory = contentsDir.GetFiles();
             var tarArchiveName = @"contents.tar.gz";
@@ -49,49 +50,21 @@ namespace Playground.Docker
                 }
             }
 
-            var extractedDir = Directory.CreateDirectory("extracted");
-
-            using (var sourceStream = new GZipInputStream(File.OpenRead(tarArchiveName)))
-            {
-                using (var t = TarArchive.CreateInputTarArchive(sourceStream, TarBuffer.DefaultBlockFactor))
-                {
-                    t.ExtractContents(extractedDir.FullName);
-                }
-            }
-
-            var files = extractedDir.GetFiles();
-
             using var contentsStream = File.OpenRead(tarArchiveName);
 
-            var image = await client.Images.BuildImageFromDockerfileAsync(contentsStream, new ImageBuildParameters
+            var logStream = await client.Images.BuildImageFromDockerfileAsync(contentsStream, new ImageBuildParameters
             {
+                Tags = new[] { "playground-hello" }
             });
 
-            var read = -1;
-
-            using var imageStream = File.OpenWrite("image.tar.gz");
-            {
-                do
-                {
-                    var b = new byte[1024];
-
-                    read = image.Read(b, 0, 1024);
-
-                    imageStream.Write(b, 0, b.Length);
-                } while (read > 0);
-                imageStream.Close();
-            }
-
-            using var imageReadStream = File.OpenRead("image.tar.gz");
-            {
-                await client.Images.CreateImageAsync(new ImagesCreateParameters
-                {
-                }, imageReadStream, null, null);
-            }
 
             var response = await client.Containers.CreateContainerAsync(new CreateContainerParameters
             {
-                
+                Image = "playground-hello"
+            });
+
+            var started = await client.Containers.StartContainerAsync(response.ID, new ContainerStartParameters
+            {
             });
         }
     }
